@@ -1,10 +1,11 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <avr/sleep.h>
 
 // GENERAL CONFIG
 #define TIMEOUT_COUNT 150
-#define STATE_CHANGE_COUNT 25
+#define STATE_CHANGE_COUNT 60
 
 #define ERROR_LED_COUNT 10
 #define MOTOR_SWITCH_BOUNCE_TIME 800
@@ -80,17 +81,20 @@ uint8_t ledCounter = 0;
 void setTimerSpeed(uint8_t timerSpeedId) {
   if(timerSpeed != timerSpeedId) {
     switch(timerSpeedId) {
+      // 500 000 / (65535) = 7,629 Hz
       case TIMER_VERY_FAST_CS: // f = 8 000 000 / 65 535 = 122.07 Hz -> dont forget led counter -> 12.207 Hz
         TCCR1B |= (1 << CS10);
         TCCR1B &= ~(1 << CS12 | 1 << CS11);
       break;
+      // 500 000 / (8 * 65535) = 0,953 Hz
       case TIMER_FAST_CS: // f = 8 000 000 / (64 * 65535) = 1.907 Hz -> about 0.524 seconds
+        TCCR1B |= (1 << CS11);
+        TCCR1B &= ~(1 << CS10 | 1 << CS12);
+      break;
+      // 500 000 / (64 * 65535) = 0.1192 Hz
+      case TIMER_SLOW_CS: // f = 8 000 000 / (1024 * 65535) = 0.1192 Hz -> about 8.389 seconds
         TCCR1B |= (1 << CS10 | 1 << CS11);
         TCCR1B &= ~(1 << CS12);
-      break;
-      case TIMER_SLOW_CS: // f = 8 000 000 / (1024 * 65535) = 0.1192 Hz -> about 8.389 seconds
-        TCCR1B |= (1 << CS10 | 1 << CS12);
-        TCCR1B &= ~(1 << CS11);
       break;
       case TIMER_OFF:
         TCCR1B &= ~(1 << CS02 | 1 << CS01 | 1 << CS00);
@@ -188,6 +192,7 @@ ISR(INT1_vect) {
 }
 
 ISR(TIMER1_OVF_vect) {
+  sleep_disable();
   switch(state) {
     case STATE_IDLE_UP:
       if(bit_is_set(SENSOR_INPUT_INPUT, SENSOR_INPUT_PIN)) {
@@ -208,6 +213,9 @@ ISR(TIMER1_OVF_vect) {
         _delay_ms(100);
         LED_PORT &= ~(1 << LED_PIN);
         stateChangeCounter = 0;
+        sei();
+        sleep_enable();
+        sleep_cpu();
       }
     break;
     case STATE_IDLE_DOWN:
@@ -225,6 +233,9 @@ ISR(TIMER1_OVF_vect) {
         _delay_ms(100);
         LED_PORT &= ~(1 << LED_PIN);
         stateChangeCounter = 0;
+        sei();
+        sleep_enable();
+        sleep_cpu();
       }
     break;
     case STATE_MOVING_UP:
@@ -286,6 +297,9 @@ int main(void) {
   MOTOR_DOWN_PORT &= ~(1 << MOTOR_DOWN_PIN);
   MOTOR_UP_PORT &= ~(1 << MOTOR_UP_PIN);
 
+  set_sleep_mode(SLEEP_MODE_IDLE);
+  sleep_disable();
+
    _delay_ms(1000);
 
   LED_PORT &= ~(1 << LED_PIN);
@@ -303,28 +317,29 @@ int main(void) {
 
   // enable interrupts
   sei();
+  sleep_enable();
 
   while(1) {
-    if(bit_is_clear(SWITCH_INPUT_INPUT, SWITCH_INPUT_PIN)) {
-      switch(state) {
-        case STATE_MOVING_UP:
-          setState(STATE_IDLE_UP);
-          _delay_ms(500);
-        break;
-        case STATE_IDLE_UP:
-          setState(STATE_MOVING_DOWN);
-          _delay_ms(500);
-        break;
-        case STATE_MOVING_DOWN:
-          setState(STATE_IDLE_DOWN);
-          _delay_ms(500);
-        break;
-        case STATE_IDLE_DOWN:
-          setState(STATE_MOVING_UP);
-          _delay_ms(500);
-        break;
-        default: break;
-      }
-    }
+    // if(bit_is_clear(SWITCH_INPUT_INPUT, SWITCH_INPUT_PIN)) {
+    //   switch(state) {
+    //     case STATE_MOVING_UP:
+    //       setState(STATE_IDLE_UP);
+    //       _delay_ms(500);
+    //     break;
+    //     case STATE_IDLE_UP:
+    //       setState(STATE_MOVING_DOWN);
+    //       _delay_ms(500);
+    //     break;
+    //     case STATE_MOVING_DOWN:
+    //       setState(STATE_IDLE_DOWN);
+    //       _delay_ms(500);
+    //     break;
+    //     case STATE_IDLE_DOWN:
+    //       setState(STATE_MOVING_UP);
+    //       _delay_ms(500);
+    //     break;
+    //     default: break;
+    //   }
+    // }
   }
 }
