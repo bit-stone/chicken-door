@@ -4,7 +4,7 @@
 #include <avr/sleep.h>
 
 // GENERAL CONFIG
-#define TIMEOUT_COUNT 150
+#define TIMEOUT_COUNT 80
 #define STATE_CHANGE_COUNT 60
 
 #define ERROR_LED_COUNT 10
@@ -192,7 +192,7 @@ ISR(INT1_vect) {
 }
 
 ISR(TIMER1_OVF_vect) {
-  sleep_disable();
+  // sleep_disable();
   switch(state) {
     case STATE_IDLE_UP:
       if(bit_is_set(SENSOR_INPUT_INPUT, SENSOR_INPUT_PIN)) {
@@ -213,9 +213,9 @@ ISR(TIMER1_OVF_vect) {
         _delay_ms(100);
         LED_PORT &= ~(1 << LED_PIN);
         stateChangeCounter = 0;
-        sei();
-        sleep_enable();
-        sleep_cpu();
+        // sei();
+        // sleep_enable();
+        // sleep_cpu();
       }
     break;
     case STATE_IDLE_DOWN:
@@ -233,9 +233,9 @@ ISR(TIMER1_OVF_vect) {
         _delay_ms(100);
         LED_PORT &= ~(1 << LED_PIN);
         stateChangeCounter = 0;
-        sei();
-        sleep_enable();
-        sleep_cpu();
+        // sei();
+        // sleep_enable();
+        // sleep_cpu();
       }
     break;
     case STATE_MOVING_UP:
@@ -248,10 +248,10 @@ ISR(TIMER1_OVF_vect) {
     break;
     case STATE_ERROR:
       ledCounter++;
-      if(ledCounter > ERROR_LED_COUNT) {
-        LED_PORT ^= (1 << LED_PIN);
-        ledCounter = 0;
-      }
+      LED_PORT ^= (1 << LED_PIN);
+      // if(ledCounter > ERROR_LED_COUNT) {
+      //   ledCounter = 0;
+      // }
     break;
   }
 }
@@ -297,8 +297,8 @@ int main(void) {
   MOTOR_DOWN_PORT &= ~(1 << MOTOR_DOWN_PIN);
   MOTOR_UP_PORT &= ~(1 << MOTOR_UP_PIN);
 
-  set_sleep_mode(SLEEP_MODE_IDLE);
-  sleep_disable();
+  // set_sleep_mode(SLEEP_MODE_IDLE);
+  // sleep_disable();
 
    _delay_ms(1000);
 
