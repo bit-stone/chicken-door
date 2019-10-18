@@ -195,6 +195,10 @@ ISR(TIMER1_OVF_vect) {
   // sleep_disable();
   switch(state) {
     case STATE_IDLE_UP:
+      if(bit_is_clear(SWITCH_INPUT_INPUT, SWITCH_INPUT_PIN)) {
+        setState(STATE_MOVING_DOWN);
+        break;
+      }
       if(bit_is_set(SENSOR_INPUT_INPUT, SENSOR_INPUT_PIN)) {
         setTimerSpeed(TIMER_FAST_CS);
         LED_PORT |= (1 << LED_PIN);
@@ -219,6 +223,10 @@ ISR(TIMER1_OVF_vect) {
       }
     break;
     case STATE_IDLE_DOWN:
+      if(bit_is_clear(SWITCH_INPUT_INPUT, SWITCH_INPUT_PIN)) {
+        setState(STATE_MOVING_UP);
+        break;
+      }
       if(bit_is_clear(SENSOR_INPUT_INPUT, SENSOR_INPUT_PIN)) {
         setTimerSpeed(TIMER_FAST_CS);
         LED_PORT |= (1 << LED_PIN);
